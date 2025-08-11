@@ -26,9 +26,62 @@ export class Server {
   async start() {
     //* Middlewares
     this.app.use(cors({
-      origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174'],
-      credentials: true
+      origin: [
+        'http://localhost:5173', 
+        'http://localhost:3000', 
+        'http://localhost:5174', 
+        'http://localhost:5175',
+        'http://143.198.185.191:3000',
+        'http://143.198.185.191:5173',
+        'http://143.198.185.191:5174',
+        'http://143.198.185.191:5175'
+      ],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: [
+        'Origin',
+        'X-Requested-With',
+        'Content-Type',
+        'Accept',
+        'Authorization',
+        'X-HTTP-Method-Override'
+      ],
+      exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+      maxAge: 86400 // 24 hours
     }));
+
+    //* Middleware adicional para asegurar headers CORS
+    this.app.use((req, res, next) => {
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:3000', 
+        'http://localhost:5174',
+        'http://localhost:5175',
+        'http://143.198.185.191:3000',
+        'http://143.198.185.191:5173',
+        'http://143.198.185.191:5174',
+        'http://143.198.185.191:5175'
+      ];
+      
+      const origin = req.headers.origin;
+      if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+      } else {
+        res.header('Access-Control-Allow-Origin', '*');
+      }
+      
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-HTTP-Method-Override');
+      
+      // Handle preflight requests
+      if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+      }
+      
+      next();
+    });
 
     //* Session middleware
     this.app.use(session({
