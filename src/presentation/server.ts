@@ -34,7 +34,9 @@ export class Server {
         'http://143.198.185.191:3000',
         'http://143.198.185.191:5173',
         'http://143.198.185.191:5174',
-        'http://143.198.185.191:5175'
+        'http://143.198.185.191:5175',
+	'https://fotocopias.lacentenoderecho.com',
+	'https://plataforma.lacentenoderecho.com'
       ],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -60,7 +62,9 @@ export class Server {
         'http://143.198.185.191:3000',
         'http://143.198.185.191:5173',
         'http://143.198.185.191:5174',
-        'http://143.198.185.191:5175'
+        'http://143.198.185.191:5175',
+	'https://fotocopias.lacentenoderecho.com',
+	'https://plataforma.lacentenoderecho.com/'
       ];
       
       const origin = req.headers.origin;
