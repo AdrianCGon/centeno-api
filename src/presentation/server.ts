@@ -2,6 +2,7 @@ import express, { Router } from 'express';
 import path from 'path';
 import cors from 'cors';
 import session from 'express-session';
+import fileUpload from 'express-fileupload';
 
 interface Options {
   port: number;
@@ -101,6 +102,17 @@ export class Server {
 
     this.app.use(express.json()); // raw
     this.app.use(express.urlencoded({ extended: true })); // x-www-form-urlencoded
+    
+    //* File upload middleware
+    this.app.use(fileUpload({
+      limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+      useTempFiles: true,
+      tempFileDir: '/tmp/',
+      createParentPath: true,
+      abortOnLimit: true,
+      responseOnLimit: 'Archivo demasiado grande. Máximo 50MB.',
+      debug: false
+    }));
 
     //* Public Folder
     this.app.use(express.static(this.publicPath));
@@ -118,7 +130,7 @@ export class Server {
     });
 
     this.serverListener = this.app.listen(this.port, () => {
-      console.log(`Server running on port ${this.port}`);
+      console.log(`🚀 Servidor iniciado en puerto ${this.port}`);
     });
   }
 
