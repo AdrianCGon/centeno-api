@@ -8,7 +8,6 @@ export interface CreateComisionRequest {
   docente: string;
   horario: string;
   aula: string;
-  comision: string;
 }
 
 export class CreateComisionUseCase {

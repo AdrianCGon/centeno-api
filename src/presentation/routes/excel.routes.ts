@@ -15,6 +15,10 @@ router.post('/extract-text', (req, res) => ExcelController.extractTextFromExcel(
 // Ruta de debug para buscar comisiones en un archivo Excel
 router.post('/find-comisiones', (req, res) => ExcelController.findComisionesInExcel(req, res));
 
+// RUTAS DE TEST PARA DEBUGGING
+router.get('/test-basic', (req, res) => ExcelController.testBasicFunctionality(req, res));
+router.get('/test-known-data', (req, res) => ExcelController.testWithKnownData(req, res));
+
 export class ExcelRoutes {
   static get routes(): Router {
     return router;

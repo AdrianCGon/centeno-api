@@ -6,7 +6,7 @@ import { CreateSolicitudImpresionUseCase } from '../../application/use-cases/sol
 import { GetAllSolicitudesUseCase } from '../../application/use-cases/solicitud-impresion/get-all-solicitudes.use-case';
 import { GetSolicitudByIdUseCase } from '../../application/use-cases/solicitud-impresion/get-solicitud-by-id.use-case';
 import { UpdateSolicitudEstadoUseCase } from '../../application/use-cases/solicitud-impresion/update-solicitud-estado.use-case';
-import { uploadFields, uploadFieldsFlexible, uploadRobust, uploadBusboy } from '../../lib/fileUpload';
+import { uploadFields } from '../../lib/fileUpload';
 import { requireAuth } from '../../lib/auth';
 
 const router = Router();
@@ -29,21 +29,6 @@ const controller = new SolicitudImpresionController(
 
 // Rutas públicas (para el frontend de fotocopias)
 router.post('/', uploadFields, controller.createSolicitud);
-
-// Ruta con middleware flexible para archivos opcionales
-router.post('/flexible', uploadFieldsFlexible, controller.createSolicitud);
-
-// Ruta con middleware robusto (recomendada)
-router.post('/robust', uploadRobust, controller.createSolicitud);
-
-// Ruta con middleware busboy (nueva implementación)
-router.post('/busboy', uploadBusboy, controller.createSolicitud);
-
-// Ruta para solicitudes solo con libros (sin archivos)
-router.post('/sin-archivos', controller.createSolicitudSinArchivos);
-
-// Ruta de prueba para debuggear el cálculo (sin archivos)
-router.post('/test-calculo', controller.testCalculo);
 
 // Rutas protegidas (para el admin)
 router.get('/', requireAuth, controller.getAllSolicitudes);

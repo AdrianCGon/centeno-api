@@ -37,7 +37,7 @@ export class ComisionController {
    */
   static async create(req: Request, res: Response) {
     try {
-      const { periodo, actividad, modalidad, docente, horario, aula, comision } = req.body;
+      const { periodo, actividad, modalidad, docente, horario, aula } = req.body;
 
       // Log de debug para ver qué datos llegan
       console.log('🔍 Datos recibidos en create comisión:', {
@@ -46,23 +46,8 @@ export class ComisionController {
         modalidad,
         docente,
         horario,
-        aula,
-        comision
+        aula
       });
-
-      // Log de debug para ver el tipo y contenido de cada campo
-      console.log('🔍 Tipos de datos recibidos:');
-      console.log('  - periodo:', typeof periodo, `"${periodo}"`);
-      console.log('  - actividad:', typeof actividad, `"${actividad}"`);
-      console.log('  - modalidad:', typeof modalidad, `"${modalidad}"`);
-      console.log('  - docente:', typeof docente, `"${docente}"`);
-      console.log('  - horario:', typeof horario, `"${horario}"`);
-      console.log('  - aula:', typeof aula, `"${aula}"`);
-      console.log('  - comision:', typeof comision, `"${comision}"`);
-
-      // Log de debug para ver el body completo
-      console.log('🔍 Body completo recibido:', req.body);
-      console.log('🔍 Headers recibidos:', req.headers);
 
       // Verificar cada campo individualmente
       console.log('🔍 Verificación de campos recibidos:');
@@ -72,17 +57,15 @@ export class ComisionController {
       console.log('  - docente:', docente ? '✅' : '❌', `"${docente}"`);
       console.log('  - horario:', horario ? '✅' : '❌', `"${horario}"`);
       console.log('  - aula:', aula ? '✅' : '❌', `"${aula}"`);
-      console.log('  - comision:', comision ? '✅' : '❌', `"${comision}"`);
 
-      if (!periodo || !actividad || !modalidad || !docente || !horario || !aula || !comision) {
+      if (!periodo || !actividad || !modalidad || !docente || !horario || !aula) {
         console.log('❌ Campos faltantes:', {
           periodo: !!periodo,
           actividad: !!actividad,
           modalidad: !!modalidad,
           docente: !!docente,
           horario: !!horario,
-          aula: !!aula,
-          comision: !!comision
+          aula: !!aula
         });
         
         // Mostrar qué campos específicos están faltando
@@ -93,7 +76,6 @@ export class ComisionController {
         if (!docente) camposFaltantes.push('docente');
         if (!horario) camposFaltantes.push('horario');
         if (!aula) camposFaltantes.push('aula');
-        if (!comision) camposFaltantes.push('comision');
         
         console.log('❌ Campos faltantes específicos:', camposFaltantes);
         
@@ -106,21 +88,20 @@ export class ComisionController {
       const dataSource = new ComisionDataSource();
       const repository = new ComisionRepositoryImpl(dataSource);
       const useCase = new CreateComisionUseCase(repository);
-      const comisionCreada = await useCase.execute({
+      const comision = await useCase.execute({
         periodo,
         actividad,
         modalidad,
         docente,
         horario,
-        aula,
-        comision
+        aula
       });
 
-      console.log('✅ Comisión creada exitosamente:', comisionCreada);
+      console.log('✅ Comisión creada exitosamente:', comision);
 
       return res.status(201).json({
         success: true,
-        data: comisionCreada,
+        data: comision,
         message: 'Comisión creada exitosamente'
       });
     } catch (error) {

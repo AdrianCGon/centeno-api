@@ -103,16 +103,16 @@ export class Server {
     this.app.use(express.json()); // raw
     this.app.use(express.urlencoded({ extended: true })); // x-www-form-urlencoded
     
-    //* File upload middleware - COMENTADO TEMPORALMENTE PARA EVITAR CONFLICTOS
-    // this.app.use(fileUpload({
-    //   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
-    //   useTempFiles: true,
-    //   tempFileDir: '/tmp/',
-    //   createParentPath: true,
-    //   abortOnLimit: true,
-    //   responseOnLimit: 'Archivo demasiado grande. Máximo 50MB.',
-    //   debug: false
-    // }));
+    //* File upload middleware
+    this.app.use(fileUpload({
+      limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+      useTempFiles: true,
+      tempFileDir: '/tmp/',
+      createParentPath: true,
+      abortOnLimit: true,
+      responseOnLimit: 'Archivo demasiado grande. Máximo 50MB.',
+      debug: false
+    }));
 
     //* Public Folder
     this.app.use(express.static(this.publicPath));

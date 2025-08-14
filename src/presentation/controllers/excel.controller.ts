@@ -147,4 +147,46 @@ export class ExcelController {
       });
     }
   }
+
+  /**
+   * Endpoint de prueba para verificar funcionalidad básica
+   */
+  static async testBasicFunctionality(req: Request, res: Response) {
+    try {
+      const result = ExcelService.testBasicFunctionality();
+      return res.json({
+        success: true,
+        message: 'Test de funcionalidad básica completado',
+        result: result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error en test básico:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error en test básico'
+      });
+    }
+  }
+
+  /**
+   * Endpoint de prueba con datos conocidos
+   */
+  static async testWithKnownData(req: Request, res: Response) {
+    try {
+      const result = ExcelService.testWithKnownData();
+      return res.json({
+        success: true,
+        message: 'Test con datos conocidos completado',
+        result: result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error en test con datos conocidos:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error en test con datos conocidos'
+      });
+    }
+  }
 } 

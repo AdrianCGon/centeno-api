@@ -56,7 +56,7 @@ export class ExcelService {
   }
 
   /**
-   * Busca comisiones en un archivo Excel
+   * Encuentra comisiones en un archivo Excel
    */
   static findComisionesInExcel(archivo: any): ComisionExcel[] {
     try {
@@ -69,47 +69,20 @@ export class ExcelService {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
-        // PRIMERA PASADA: Identificar la columna "Comisión" en el header
-        let columnaComision = -1;
-        if (jsonData.length > 0) {
-          const headerRow = jsonData[0];
-          if (Array.isArray(headerRow)) {
-            for (let colIndex = 0; colIndex < headerRow.length; colIndex++) {
-              const headerValue = String(headerRow[colIndex] || '');
-              if (headerValue.toLowerCase().includes('comisión') || headerValue.toLowerCase().includes('comision')) {
-                columnaComision = colIndex;
-                console.log(`🔍 Columna "Comisión" identificada en hoja "${sheetName}" en posición ${colIndex}: "${headerValue}"`);
-                break;
-              }
-            }
-          }
-        }
-        
-        // SEGUNDA PASADA: Procesar cada fila buscando comisiones
-        for (let rowIndex = 1; rowIndex < jsonData.length; rowIndex++) { // Empezar desde 1 para saltar el header
-          const row = jsonData[rowIndex];
-          if (!Array.isArray(row) || row.length === 0) continue;
+        // Buscar comisiones en cada fila
+        for (let i = 0; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          if (!Array.isArray(row)) continue;
           
-          // Si tenemos una columna de comisión identificada, usarla
-          if (columnaComision >= 0) {
-            const comision = this.extractComisionDataFromColumn(row, rowIndex, columnaComision, sheetName);
-            if (comision) {
-              comisiones.push(comision);
-              continue; // Pasar a la siguiente fila
-            }
-          }
-          
-          // Fallback: buscar patrones de comisión en cualquier celda
-          const comision = this.findComisionInRow(row, rowIndex, sheetName);
+          // Buscar patrones de comisión en la fila
+          const comision = this.findComisionInRow(row, i, sheetName);
           if (comision) {
             comisiones.push(comision);
           }
         }
       }
       
-      console.log(`📊 Total de comisiones encontradas: ${comisiones.length}`);
       return comisiones;
-      
     } catch (error) {
       console.error('Error al buscar comisiones en Excel:', error);
       return [];
@@ -120,25 +93,7 @@ export class ExcelService {
    * Busca una comisión en una fila específica
    */
   private static findComisionInRow(row: any[], rowIndex: number, sheetName: string): ComisionExcel | null {
-    // PRIMERA PASADA: Buscar en la columna llamada "Comisión" (si existe)
-    for (let colIndex = 0; colIndex < row.length; colIndex++) {
-      const cellValue = String(row[colIndex] || '');
-      
-      // Si la celda contiene exactamente "Comisión" o "COMISIÓN", buscar en la siguiente fila (headers)
-      if (cellValue.toLowerCase().includes('comisión') || cellValue.toLowerCase().includes('comision')) {
-        console.log(`🔍 Encontrada columna de comisión en posición ${colIndex}: "${cellValue}"`);
-        
-        // IMPORTANTE: Si encontramos la columna "Comisión", extraer el valor directamente
-        // No buscar patrones, sino tomar el valor tal como está
-        const comision = this.extractComisionDataFromColumn(row, rowIndex, colIndex, sheetName);
-        if (comision) {
-          console.log(`✅ Comisión extraída de columna "Comisión":`, comision);
-          return comision;
-        }
-      }
-    }
-    
-    // SEGUNDA PASADA: Buscar patrones de comisión en cualquier celda (fallback)
+    // Buscar patrones de comisión en la fila
     for (let colIndex = 0; colIndex < row.length; colIndex++) {
       const cellValue = String(row[colIndex] || '');
       
@@ -146,7 +101,6 @@ export class ExcelService {
       if (this.isComisionPattern(cellValue)) {
         const comision = this.extractComisionData(row, rowIndex, colIndex, sheetName);
         if (comision) {
-          console.log(`✅ Comisión encontrada por patrón:`, comision);
           return comision;
         }
       }
@@ -159,28 +113,18 @@ export class ExcelService {
    * Verifica si un valor de celda coincide con un patrón de comisión
    */
   private static isComisionPattern(value: string): boolean {
-    // Limpiar el valor
-    const cleanValue = value.trim();
+    if (!value || typeof value !== 'string') return false;
     
-    // Patrones de comisión:
-    // - 131, 6007 (números de 3-4 dígitos)
-    // - 4H6, 3E2 (formato dígito-letra-dígito)
-    // - 134B, 9658A (formato dígitos-letra)
-    
-    const comisionPatterns = [
-      /^\d{3,4}$/,           // 131, 6007, 9658, 9659
-      /^\d{1,2}[A-Z]\d{1,2}$/, // 4H6, 3E2, 5A1
-      /^\d{3,4}[A-Z]$/,      // 134B, 9658A
-      /^[A-Z]\d{2,3}$/       // A123, B15
+    // Patrones de comisión comunes
+    const patterns = [
+      /^\d{4}$/,           // 4 dígitos (1001, 1002, etc.)
+      /^\d{3,4}[A-Z]$/,    // 3-4 dígitos + letra (66U, 6X3, etc.)
+      /^[A-Z]\d{2,3}$/,    // Letra + 2-3 dígitos (33U, 35N, etc.)
+      /^Comisión\s+\d+/,   // "Comisión 123"
+      /^COMISIÓN\s+\d+/    // "COMISIÓN 123"
     ];
     
-    const isComision = comisionPatterns.some(pattern => pattern.test(cleanValue));
-    
-    if (isComision) {
-      console.log(`🔢 Valor "${cleanValue}" identificado como patrón de comisión`);
-    }
-    
-    return isComision;
+    return patterns.some(pattern => pattern.test(value.trim()));
   }
 
   /**
@@ -199,15 +143,6 @@ export class ExcelService {
       // Log de debug para ver qué se extrajo
       console.log(`🔍 Datos extraídos para comisión ${comisionCode}:`, info);
       
-      // Si no se extrajo comisión pero sí actividad, intentar extraer comisión de la actividad
-      if (!info.comision && info.actividad) {
-        const comisionFromActividad = this.extractComisionCode(info.actividad);
-        if (comisionFromActividad) {
-          info.comision = comisionFromActividad;
-          console.log(`🔢 Código de comisión extraído de actividad: ${comisionFromActividad}`);
-        }
-      }
-      
       const comisionData = {
         nombre: `Comisión ${comisionCode}`,
         archivo: sheetName,
@@ -215,7 +150,7 @@ export class ExcelService {
         texto: `${comisionCode} - ${info.actividad || 'Sin descripción'}`,
         periodoLectivo: info.periodoLectivo || 'N/A',
         actividad: info.actividad || 'N/A',
-        comision: info.comision || comisionCode, // Usar comisión extraída o el código original
+        comision: comisionCode,
         modalidad: info.modalidad || 'N/A',
         docente: info.docente || 'N/A',
         horario: info.horario || 'N/A',
@@ -246,86 +181,8 @@ export class ExcelService {
    */
   private static extractComisionCode(value: string): string | null {
     // Buscar números de comisión
-    // Patrones: 131, 6007, 4H6, etc.
-    // También buscar al inicio de textos como "131 - TEORÍA GENERAL DEL DERECHO"
-    
-    // Primero intentar extraer del inicio del texto (formato "131 - ...")
-    const inicioMatch = value.match(/^(\d{3,4}[A-Z]?|[A-Z]\d{2,3})\s*[-–]/);
-    if (inicioMatch) {
-      const code = inicioMatch[1];
-      console.log(`🔍 Código de comisión extraído del inicio: "${code}" de "${value}"`);
-      return code;
-    }
-    
-    // Luego intentar el patrón general
-    const match = value.match(/(\d{3,4}[A-Z]?|[A-Z]\d{2,3}|\d{4}|\d{3})/);
-    
-    if (match) {
-      const code = match[1];
-      console.log(`🔍 Código de comisión extraído: "${code}" de "${value}"`);
-      return code;
-    }
-    
-    console.log(`❌ No se pudo extraer código de comisión de: "${value}"`);
-    return null;
-  }
-
-  /**
-   * Extrae datos de comisión de una columna específica
-   */
-  private static extractComisionDataFromColumn(row: any[], rowIndex: number, colIndex: number, sheetName: string): ComisionExcel | null {
-    try {
-      const comisionValue = String(row[colIndex] || '');
-      const comisionCode = this.extractComisionCode(comisionValue);
-
-      if (!comisionCode) return null;
-
-      // Extraer información contextual de las celdas cercanas
-      const info = this.extractContextualInfo(row, colIndex);
-
-      // Log de debug para ver qué se extrajo
-      console.log(`🔍 Datos extraídos para comisión ${comisionCode} (columna):`, info);
-
-      // Si no se extrajo comisión pero sí actividad, intentar extraer comisión de la actividad
-      if (!info.comision && info.actividad) {
-        const comisionFromActividad = this.extractComisionCode(info.actividad);
-        if (comisionFromActividad) {
-          info.comision = comisionFromActividad;
-          console.log(`🔢 Código de comisión extraído de actividad (columna): ${comisionFromActividad}`);
-        }
-      }
-
-      const comisionData = {
-        nombre: `Comisión ${comisionCode}`,
-        archivo: sheetName,
-        pagina: rowIndex + 1,
-        texto: `${comisionCode} - ${info.actividad || 'Sin descripción'}`,
-        periodoLectivo: info.periodoLectivo || 'N/A',
-        actividad: info.actividad || 'N/A',
-        comision: info.comision || comisionCode, // Usar comisión extraída o el código original
-        modalidad: info.modalidad || 'N/A',
-        docente: info.docente || 'N/A',
-        horario: info.horario || 'N/A',
-        aula: info.aula || 'N/A'
-      };
-
-      // Log de debug para ver la comisión final
-      console.log(`📋 Comisión final creada (columna):`, comisionData);
-
-      // Verificar si hay campos con "N/A" o vacíos
-      const camposConNA = Object.entries(comisionData)
-        .filter(([key, value]) => value === 'N/A' || value === '')
-        .map(([key, value]) => key);
-
-      if (camposConNA.length > 0) {
-        console.warn(`⚠️ Comisión ${comisionCode} tiene campos con "N/A" o vacíos (columna):`, camposConNA);
-      }
-
-      return comisionData;
-    } catch (error) {
-      console.error('Error al extraer datos de comisión (columna):', error);
-      return null;
-    }
+    const match = value.match(/(\d{3,4}[A-Z]?|[A-Z]\d{2,3}|\d{4})/);
+    return match ? match[1] : null;
   }
 
   /**
@@ -338,7 +195,6 @@ export class ExcelService {
     
     // Log de debug para ver la fila completa
     console.log(`🔍 Procesando fila completa:`, row);
-    console.log(`🔍 Columna de comisión en posición: ${colIndex}`);
     
     // Primera pasada: clasificar todas las celdas
     for (let i = 0; i < row.length; i++) {
@@ -347,23 +203,14 @@ export class ExcelService {
       
       console.log(`  📍 Celda ${i}: "${cellValue}"`);
       
-      // Clasificar cada celda por prioridad (ajustada para comisiones)
+      // Clasificar cada celda por prioridad (ajustada para aulas)
       // Prioridad: periodo > comision > aula > modalidad > horario > actividad > docente
       if (this.isPeriodoLectivo(cellValue)) {
         cellClassifications.push({value: cellValue, type: 'periodoLectivo'});
         console.log(`    ✅ Clasificado como periodoLectivo`);
       } else if (this.isComisionPattern(cellValue)) {
-        // Si es un patrón de comisión, verificar si también es una actividad
-        if (this.isActividad(cellValue)) {
-          // Es tanto comisión como actividad (como "131 - TEORÍA GENERAL DEL DERECHO")
-          cellClassifications.push({value: cellValue, type: 'comision'});
-          cellClassifications.push({value: cellValue, type: 'actividad'});
-          console.log(`    🔢📚 Clasificado como comisión Y actividad`);
-        } else {
-          // Solo es comisión
-          cellClassifications.push({value: cellValue, type: 'comision'});
-          console.log(`    🔢 Clasificado como comision`);
-        }
+        cellClassifications.push({value: cellValue, type: 'comision'});
+        console.log(`    🔢 Clasificado como comision`);
       } else if (this.isAula(cellValue)) {
         cellClassifications.push({value: cellValue, type: 'aula'});
         console.log(`    🏫 Clasificado como aula`);
@@ -374,12 +221,12 @@ export class ExcelService {
         cellClassifications.push({value: cellValue, type: 'horario'});
         console.log(`    🕐 Clasificado como horario`);
       } else if (this.isActividad(cellValue)) {
-        // Solo clasificar como actividad si NO es aula ni comisión
-        if (!this.isAula(cellValue) && !this.isComisionPattern(cellValue)) {
+        // Solo clasificar como actividad si NO es aula
+        if (!this.isAula(cellValue)) {
           cellClassifications.push({value: cellValue, type: 'actividad'});
           console.log(`    📚 Clasificado como actividad`);
         } else {
-          console.log(`    ❌ No clasificado como actividad (es aula o comisión)`);
+          console.log(`    ❌ No clasificado como actividad (es aula)`);
         }
       } else if (this.isDocente(cellValue)) {
         cellClassifications.push({value: cellValue, type: 'docente'});
@@ -387,6 +234,18 @@ export class ExcelService {
       } else {
         // Log temporal para valores no clasificados
         console.log(`    ❓ Valor no clasificado: "${cellValue}"`);
+      }
+      
+      // LOG ESPECIAL PARA DEBUGGING
+      if (cellValue === 'ABOGACÍA 2025') {
+        console.log(`🎯 DEBUG ESPECIAL para "ABOGACÍA 2025":`);
+        console.log(`  - isPeriodoLectivo: ${this.isPeriodoLectivo(cellValue)}`);
+        console.log(`  - isComisionPattern: ${this.isComisionPattern(cellValue)}`);
+        console.log(`  - isAula: ${this.isAula(cellValue)}`);
+        console.log(`  - isModalidad: ${this.isModalidad(cellValue)}`);
+        console.log(`  - isHorario: ${this.isHorario(cellValue)}`);
+        console.log(`  - isActividad: ${this.isActividad(cellValue)}`);
+        console.log(`  - isDocente: ${this.isDocente(cellValue)}`);
       }
     }
     
@@ -400,8 +259,6 @@ export class ExcelService {
     // Log temporal para mostrar qué se extrajo
     if (Object.keys(info).length > 0) {
       console.log(`📋 Información extraída de la fila:`, info);
-    } else {
-      console.log(`⚠️ No se extrajo información de la fila`);
     }
     
     return info;
@@ -423,7 +280,8 @@ export class ExcelService {
   private static isActividad(value: string): boolean {
     // Excluir valores que claramente NO son actividades
     if (this.isPeriodoLectivo(value) || this.isModalidad(value) || 
-        this.isDocente(value) || this.isHorario(value)) {
+        this.isDocente(value) || this.isHorario(value) ||
+        this.isComisionPattern(value)) {
       return false;
     }
     
@@ -436,9 +294,6 @@ export class ExcelService {
     if (/^\d{1,3}$/.test(value)) {
       return false;
     }
-    
-    // IMPORTANTE: NO excluir valores que son isComisionPattern si son textos largos
-    // porque "131 - TEORÍA GENERAL DEL DERECHO" es tanto comisión como actividad
     
     // Buscar patrones de actividad
     const actividadPatterns = [
@@ -577,16 +432,10 @@ export class ExcelService {
       return false;
     }
     
-    // EXCLUIR CÓDIGOS DE COMISIÓN DE 3 DÍGITOS (como "131")
-    if (/^\d{3}$/.test(cleanValue)) {
-      console.log(`❌ Valor "${cleanValue}" excluido de aula (es código de comisión)`);
-      return false;
-    }
-    
     // Patrones de aula más flexibles y comunes
     const aulaPatterns = [
-      // Números simples (1-2 dígitos) - para aulas como "1", "2", "10", "20"
-      /^\d{1,2}$/,                   
+      // Números simples (1-3 dígitos) - PRIORIDAD ALTA para aulas como "131", "204"
+      /^\d{1,3}$/,                   
       
       // Formato específico como "3E2 (PUB)", "4H6 (FIL)" - PRIORIDAD ALTA
       /^\d{1,2}[A-Z]\d{1,2}\s*\([A-Z]+\)$/,  // "3E2 (PUB)", "4H6 (FIL)", "5A1 (LAB)", etc.
@@ -721,14 +570,92 @@ export class ExcelService {
         cleanValue.length >= 2 && 
         !/^[A-Z\s]+$/.test(cleanValue) && // No solo mayúsculas y espacios
         !/^\d+$/.test(cleanValue) &&      // No solo números
-        !this.isActividad(cleanValue) &&   // No es actividad
-        !this.isDocente(cleanValue)        // No es docente
+        // ❌ ELIMINAR: !this.isActividad(cleanValue) - Llamada circular
+        // ❌ ELIMINAR: !this.isDocente(cleanValue) - Llamada circular
+        // ✅ Solo verificar que no sea solo texto en mayúsculas
+        !/^[A-Z\s]+$/.test(cleanValue)
       ];
       
       return specialCases.some(case_ => case_);
     }
     
     return true;
+  }
+
+  /**
+   * Función de prueba simple para verificar que el servicio funciona
+   */
+  static testBasicFunctionality(): any {
+    console.log('🧪 TESTING BASIC FUNCTIONALITY');
+    
+    // Probar isAula con "223"
+    const testAula = this.isAula('223');
+    console.log(`🧪 isAula("223"): ${testAula}`);
+    
+    // Probar extractComisionCode con "7024"
+    const testComision = this.extractComisionCode('7024');
+    console.log(`🧪 extractComisionCode("7024"): ${testComision}`);
+    
+    // Probar isComisionPattern con "7024"
+    const testPattern = this.isComisionPattern('7024');
+    console.log(`🧪 isComisionPattern("7024"): ${testPattern}`);
+    
+    return {
+      isAula_223: testAula,
+      extractComisionCode_7024: testComision,
+      isComisionPattern_7024: testPattern
+    };
+  }
+
+  /**
+   * Función de prueba para procesar datos conocidos
+   */
+  static testWithKnownData(): any {
+    console.log('🧪 TESTING WITH KNOWN DATA');
+    
+    // Crear una fila de prueba que debería funcionar
+    const testRow = [
+      'PRIMER CUATRIMESTRE',  // periodoLectivo
+      'ABOGACÍA 2025',        // actividad
+      '7024',                 // comision
+      'PRESENCIAL',           // modalidad
+      'VIGEVANO MARTA',       // docente
+      'Lun 14:00',           // horario
+      '223'                   // aula
+    ];
+    
+    console.log('🧪 Fila de prueba:', testRow);
+    
+    // Simular que la comisión está en el índice 2
+    const comisionIndex = 2;
+    
+    // Extraer información contextual
+    const info = this.extractContextualInfo(testRow, comisionIndex);
+    
+    console.log('🧪 Información extraída:', info);
+    
+    // Crear comisión de prueba
+    const testComision = {
+      nombre: `Comisión 7024`,
+      archivo: 'test.xlsx',
+      pagina: 1,
+      texto: `7024 - ${info.actividad}`,
+      periodoLectivo: info.periodoLectivo,
+      actividad: info.actividad,
+      comision: info.comision,
+      modalidad: info.modalidad,
+      docente: info.docente,
+      horario: info.horario,
+      aula: info.aula
+    };
+    
+    console.log('🧪 Comisión de prueba creada:', testComision);
+    
+    return {
+      testRow,
+      info,
+      testComision
+    };
   }
 
   /**

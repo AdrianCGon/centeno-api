@@ -12,7 +12,6 @@ const ComisionSchema = new Schema<ComisionDocument>({
   docente: { type: String, required: true },
   horario: { type: String, required: true },
   aula: { type: String, required: true },
-  comision: { type: String, required: true },
   realizada: { type: Boolean, default: false },
   fechaCreacion: { type: Date, default: Date.now },
   fechaActualizacion: { type: Date, default: Date.now }
@@ -27,13 +26,8 @@ const ComisionModel = mongoose.model<ComisionDocument>('Comision', ComisionSchem
 
 export class ComisionDataSource {
   async create(comision: Omit<Comision, 'id' | 'fechaCreacion' | 'fechaActualizacion'>): Promise<Comision> {
-    console.log('📝 Datos recibidos en datasource.create:', comision);
-    console.log('📝 Tipo de comision:', typeof comision);
-    console.log('📝 Claves de comision:', Object.keys(comision));
-    
     const nuevaComision = new ComisionModel({
       ...comision,
-      realizada: false,           // ✅ Agregar campo realizado por defecto
       fechaCreacion: new Date(),
       fechaActualizacion: new Date()
     });
@@ -41,11 +35,7 @@ export class ComisionDataSource {
     console.log('📝 Creando nueva comisión:', {
       periodo: comision.periodo,
       actividad: comision.actividad,
-      modalidad: comision.modalidad,
-      docente: comision.docente,
-      horario: comision.horario,
-      aula: comision.aula,
-      comision: comision.comision
+      aula: comision.aula
     });
     
     const saved = await nuevaComision.save();
@@ -54,33 +44,16 @@ export class ComisionDataSource {
       _id: saved._id,
       id: saved.id,
       periodo: saved.periodo,
-      actividad: saved.actividad,
-      modalidad: saved.modalidad,
-      docente: saved.docente,
-      horario: saved.horario,
-      aula: saved.aula,
-      comision: saved.comision,
-      realizada: saved.realizada
+      aula: saved.aula
     });
     
     const comisionObj = saved.toObject();
-    
-    // Asegurar que el campo id sea el _id de MongoDB
-    if (comisionObj._id) {
-      comisionObj.id = comisionObj._id.toString();
-    }
     
     console.log('📤 Comisión convertida a enviar:', {
       _id: comisionObj._id,
       id: comisionObj.id,
       periodo: comisionObj.periodo,
-      actividad: comisionObj.actividad,
-      modalidad: comisionObj.modalidad,
-      docente: comisionObj.docente,
-      horario: comisionObj.horario,
-      aula: comisionObj.aula,
-      comision: comisionObj.comision,
-      realizada: comisionObj.realizada
+      aula: comisionObj.aula
     });
     
     return comisionObj;
@@ -93,23 +66,11 @@ export class ComisionDataSource {
     
     const comisionesConvertidas = comisiones.map(c => {
       const comisionObj = c.toObject();
-      
-      // Asegurar que el campo id sea el _id de MongoDB
-      if (comisionObj._id) {
-        comisionObj.id = comisionObj._id.toString();
-      }
-      
       console.log('🔍 Comisión individual:', {
         _id: c._id,
         id: comisionObj.id,
         periodo: comisionObj.periodo,
-        actividad: comisionObj.actividad,
-        modalidad: comisionObj.modalidad,
-        docente: comisionObj.docente,
-        horario: comisionObj.horario,
-        aula: comisionObj.aula,
-        comision: comisionObj.comision,
-        realizada: comisionObj.realizada
+        aula: comisionObj.aula
       });
       return comisionObj;
     });
@@ -144,19 +105,7 @@ export class ComisionDataSource {
       { realizada, fechaActualizacion: new Date() }, 
       { new: true }
     );
-    
-    if (comision) {
-      const comisionObj = comision.toObject();
-      
-      // Asegurar que el campo id sea el _id de MongoDB
-      if (comisionObj._id) {
-        comisionObj.id = comisionObj._id.toString();
-      }
-      
-      return comisionObj;
-    }
-    
-    return null;
+    return comision ? comision.toObject() : null;
   }
 
   async deleteAll(): Promise<number> {

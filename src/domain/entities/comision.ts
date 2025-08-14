@@ -6,7 +6,6 @@ export interface Comision {
   docente: string;
   horario: string;
   aula: string;
-  comision: string;
   fechaCreacion: Date;
   fechaActualizacion: Date;
   realizada: boolean;
